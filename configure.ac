@@ -178,4 +178,5 @@ AC_OUTPUT([
 	vdsm/storage/protect/Makefile
 	vdsm-tool/Makefile
 	tests/Makefile
+	vdsm/gluster/Makefile
 ])

@@ -26,6 +26,11 @@ import socket
 import pprint as pp
 
 from vdsm import vdscli
+try:
+    import gluster_extension as ge
+    _ge = True
+except ImportError:
+    _ge = False
 
 BLANK_UUID = '00000000-0000-0000-0000-000000000000'
 
@@ -1490,7 +1495,10 @@ class service:
         return status['status']['code'], status['status']['message']
 
 if __name__ == '__main__':
-    serv = service()
+    if _ge:
+        serv = ge.GlusterService()
+    else:
+        serv = service()
     commands = {
         'create'  :  ( serv.do_create,
                        ('<configFile> [parameter=value, parameter=value, ......]',
@@ -2012,6 +2020,9 @@ if __name__ == '__main__':
                        "Take a live snapshot"
                       )),
     }
+    if _ge:
+        commands.update(ge.getGlusterCmdDict(serv))
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hms", ["help", "methods", "SSL", "truststore="])
 

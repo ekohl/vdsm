@@ -43,6 +43,11 @@ import caps
 from BindingXMLRPC import BindingXMLRPC
 from vmChannels import Listener
 import API
+try:
+    import gluster.gluster_api as gapi
+    _gapi = True
+except ImportError:
+    _gapi = False
 
 class clientIF:
     """
@@ -67,6 +72,10 @@ class clientIF:
         self.channelListener = Listener(self.log)
         self._generationID = str(uuid.uuid4())
         self._initIRS()
+        if _gapi:
+            self.gluster = gapi.GlusterApi(self, log)
+        else:
+            self.gluster = None
         try:
             self.vmContainer = {}
             ifids = netinfo.nics() + netinfo.bondings()

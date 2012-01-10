@@ -1,5 +1,5 @@
 #
-# Copyright 2008-2011 Red Hat, Inc.
+# Copyright 2012 Red Hat, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,37 +20,22 @@
 
 include $(top_srcdir)/build-aux/Makefile.subs
 
-dist_vdsm_PYTHON = \
-	gluster_extension.py \
-	vdsClient.py
+vdsmglusterdir = $(vdsmdir)/gluster
+dist_vdsmgluster_PYTHON = \
+	gluster_api.py \
+	gluster_binding.py \
+	gluster_cli.py \
+	gluster_exception.py \
+	gluster_utils.py
 
-nodist_bin_SCRIPTS = \
-	vdsClient
-
-nodist_vdsmpylib_PYTHON = \
-	vdscli.py
-
-dist_man1_MANS = \
-	vdsClient.1
-
-CLEANFILES = \
-	config.log \
-	$(nodist_bin_SCRIPTS) \
-	$(nodist_vdsm_PYTHON)
+nodist_vdsmgluster_PYTHON = \
+	__init__.py
 
 EXTRA_DIST = \
-	vdsClient.completion \
-	vdsClient.in \
-	vdscli.py.in
+	__init__.py.in
+
+check-local:
+	python $(srcdir)/gluster_exception.py
 
 all-local: \
-	$(nodist_bin_SCRIPTS) \
-	$(nodist_vdsm_PYTHON)
-
-install-data-local:
-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/bash_completion.d
-	$(INSTALL_DATA) $(srcdir)/vdsClient.completion \
-		$(DESTDIR)$(sysconfdir)/bash_completion.d/vdsClient
-
-uninstall-local:
-	$(RM) $(DESTDIR)$(sysconfdir)/bash_completion.d/vdsClient
+        $(nodist_vdsmgluster_PYTHON)

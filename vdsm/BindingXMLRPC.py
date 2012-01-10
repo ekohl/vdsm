@@ -34,6 +34,16 @@ import API
 import storage.volume
 import storage.safelease
 import storage.sd
+try:
+    from gluster.gluster_binding import getGlusterMethods
+    _getGlusterMethods = True
+except ImportError:
+    _getGlusterMethods = False
+try:
+    import gluster.gluster_exception as ge
+except ImportError:
+    pass
+
 
 class BindingXMLRPC(object):
     def __init__(self, cif, log, params):
@@ -189,6 +199,9 @@ class BindingXMLRPC(object):
             self.server.register_function(wrapApiMethod(method), name)
         for (method, name) in irsMethods:
             self.server.register_function(wrapIrsMethod(method), name)
+        if self.cif.gluster and _getGlusterMethods:
+            for (method, name) in getGlusterMethods(self.cif.gluster):
+                self.server.register_function(wrapApiMethod(method), name)
 
     #
     # Callable methods:
@@ -880,6 +893,11 @@ def wrapApiMethod(f):
                 return errCode['noVM']
             else:
                 return errCode['unexpected']
+        ## Gluster verbs throw errors as exception, which is retrieved by
+        ## calling response()
+        except ge.GlusterException, e:
+            f.im_self.cif.log.error("gluster exception occured", exc_info=True)
+            return e.response()
         except:
             f.im_self.cif.log.error("unexpected error", exc_info=True)
             return errCode['unexpected']

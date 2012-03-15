@@ -54,27 +54,26 @@ def getProcPartitions():
     return procPartitionsDict
 
 def getProcMdStat():
-    raidArrayDict = {}
     with open("/proc/mdstat") as f:
         f.next() # skip 1st line
-        for line in f:
-            tokens = line.strip().split()
-            if not tokens:
-                continue
-            if tokens[0].startswith("md"):
-                raidArrayDict[tokens[0]] = {"status" : tokens[2],
-                                            "type" : tokens[3],
-                                            "members" : map(lambda x:
-                                                                x.split('[')[0],
-                                                            tokens[4:])}
+        return _parseProcMdStat(f)
+
+def _parseProcMdStat(lines):
+    raidArrayDict = {}
+    for line in lines:
+        tokens = line.strip().split()
+        if not tokens:
+            continue
+        if tokens[0].startswith("md"):
+            members = [x.split('[')[0] for x in tokens[4:]]
+            raidArrayDict[tokens[0]] = {"status" : tokens[2],
+                                        "type" : tokens[3],
+                                        "members" : members}
     return raidArrayDict
 
-def _reduceToDict(reducer, out):
-    return reduce(reducer,
-                  map(dict, map(lambda x: map(lambda y: y.split('='),
-                                              x.strip().split(':')),
-                                out)),
-                  {})
+def _reduceToDict(out):
+    for line in out:
+        yield dict(pair.split('=') for pair in line.strip().split(':'))
 
 def getLvs():
     rc, out, err = utils.execCmd([constants.EXT_LVM] +
@@ -86,10 +85,10 @@ def getLvs():
     if rc:
         # TODO: add logging
         return {}
-    def _makeLvDict(x, y):
-        x[y['LVM2_LV_PATH']] = y
-        return x
-    return _reduceToDict(_makeLvDict, out)
+    return _parseLvs(out)
+
+def _parseLvs(output):
+    return dict((x['LVM2_LV_PATH'], x) for x in _reduceToDict(output))
 
 def getVgs():
     rc, out, err = utils.execCmd([constants.EXT_LVM] +
@@ -101,14 +100,17 @@ def getVgs():
     if rc:
         # TODO: add logging
         return {}
+    return _parseVgs(out)
+
+def _parseVgs(output):
     def _makeVgDict(x, y):
         y['LVM2_LV_PATH'] = [y['LVM2_LV_PATH']] if y['LVM2_LV_PATH'] else []
-        if x.has_key(y['LVM2_VG_NAME']):
+        if y['LVM2_VG_NAME'] in x:
             x[y['LVM2_VG_NAME']]['LVM2_LV_PATH'] += y['LVM2_LV_PATH']
         else:
             x[y['LVM2_VG_NAME']] = y
         return x
-    return _reduceToDict(_makeVgDict, out)
+    return reduce(_makeVgDict, _reduceToDict(output), {})
 
 def getPvs():
     rc, out, err = utils.execCmd([constants.EXT_LVM] +
@@ -120,10 +122,10 @@ def getPvs():
     if rc:
         # TODO: add logging
         return {}
-    def _makePvDict(x, y):
-        x[y['LVM2_PV_NAME']] = y
-        return x
-    return _reduceToDict(_makePvDict, out)
+    return _parsePvs(out)
+
+def _parsePvs(output):
+    return dict((x['LVM2_PV_NAME'], x) for x in _reduceToDict(output))
 
 def _getDeviceModel(name):
     model = ''
